@@ -161,7 +161,7 @@ export default function LandingPage() {
                 Get Started Free
               </button>
             </Link>
-            <p className="text-xs text-muted-foreground mt-3">Powered by free open-source AI models</p>
+
           </div>
         </div>
       </section>
@@ -191,7 +191,7 @@ export default function LandingPage() {
       <footer className="py-12 px-4 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Logo size="md" />
-          <p className="text-sm text-muted-foreground">Built with free open-source AI models. Your AI co-pilot for learning anything.</p>
+          <p className="text-sm text-muted-foreground">Built by Null Peak | Hirdendra Acharya</p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/auth/login" className="hover:text-foreground">Sign In</Link>
             <Link href="/auth/signup" className="hover:text-foreground">Sign Up</Link>
