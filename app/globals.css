@@ -4,14 +4,26 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --border: #e5e5e5;
+  --accent: #f0f0ff;
+  --accent-foreground: #6C63FF;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card: #141414;
+  --card-foreground: #ededed;
+  --muted: #1a1a1a;
+  --muted-foreground: #a3a3a3;
+  --border: #262626;
+  --accent: #1a1a2e;
+  --accent-foreground: #6C63FF;
 }
 
 body {
@@ -25,3 +37,27 @@ body {
     text-wrap: balance;
   }
 }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 3px;
+}
+
+/* Streak calendar */
+.react-calendar-heatmap .color-scale-1 { fill: #6C63FF20; }
+.react-calendar-heatmap .color-scale-2 { fill: #6C63FF40; }
+.react-calendar-heatmap .color-scale-3 { fill: #6C63FF60; }
+.react-calendar-heatmap .color-scale-4 { fill: #6C63FF; }

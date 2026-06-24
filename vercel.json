@@ -1,0 +1,22 @@
+{
+  "functions": {
+    "app/api/roadmap/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/quiz/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/weakness/analyze/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/chat/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/goals/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/node/explain/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
