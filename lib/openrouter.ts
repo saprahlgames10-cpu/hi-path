@@ -1,6 +1,7 @@
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const PRIMARY_MODEL = "deepseek/deepseek-chat";
-const FALLBACK_MODEL = "mistralai/mistral-7b-instruct:free";
+const PRIMARY_MODEL = "mistralai/mistral-7b-instruct:free";
+const FALLBACK_MODEL = "google/gemma-2-9b-it:free";
+const TEXT_MODELS = ["mistralai/mistral-7b-instruct:free", "google/gemma-2-9b-it:free", "deepseek/deepseek-chat"];
 
 interface AIResponse {
   content: string;
@@ -63,25 +64,23 @@ export async function callAI(
   systemPrompt: string,
   model?: string
 ): Promise<string> {
-  try {
-    const result = await callModel(
-      [{ role: "user", content: prompt }],
-      systemPrompt,
-      model || PRIMARY_MODEL
-    );
-    return result.content;
-  } catch (primaryError) {
+  const modelsToTry = model ? [model, ...TEXT_MODELS.filter((m) => m !== model)] : TEXT_MODELS;
+  const errors: string[] = [];
+
+  for (const m of modelsToTry) {
     try {
       const result = await callModel(
         [{ role: "user", content: prompt }],
         systemPrompt,
-        FALLBACK_MODEL
+        m
       );
       return result.content;
-    } catch (fallbackError) {
-      throw new Error(`AI call failed: ${primaryError}. Fallback also failed: ${fallbackError}`);
+    } catch (err: any) {
+      errors.push(`${m}: ${err.message}`);
     }
   }
+
+  throw new Error(`AI call failed after trying all models:\n${errors.join("\n")}`);
 }
 
 export async function callAIStreaming(
@@ -90,65 +89,71 @@ export async function callAIStreaming(
   onToken: (token: string) => void,
   model?: string
 ): Promise<void> {
-  const selectedModel = model || PRIMARY_MODEL;
-  try {
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-        "X-Title": "HiPath",
-      },
-      body: JSON.stringify({
-        model: selectedModel,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 4096,
-        stream: true,
-      }),
-    });
+  const modelsToTry = model ? [model, ...TEXT_MODELS.filter((m) => m !== model)] : TEXT_MODELS;
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
+  for (const m of modelsToTry) {
+    try {
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+          "X-Title": "HiPath",
+        },
+        body: JSON.stringify({
+          model: m,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 4096,
+          stream: true,
+        }),
+      });
 
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("No response body");
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API error ${response.status}: ${errText}`);
+      }
 
-    const decoder = new TextDecoder();
-    let buffer = "";
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
-          if (data === "[DONE]") return;
-          try {
-            const parsed = JSON.parse(data);
-            const token = parsed.choices?.[0]?.delta?.content || "";
-            if (token) onToken(token);
-          } catch {
-            // skip parse errors
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            if (data === "[DONE]") return;
+            try {
+              const parsed = JSON.parse(data);
+              const token = parsed.choices?.[0]?.delta?.content || "";
+              if (token) onToken(token);
+            } catch {
+              // skip parse errors
+            }
           }
         }
       }
+      return;
+    } catch {
+      continue;
     }
-  } catch (error) {
-    // Try fallback model non-streaming
-    const content = await callAI(prompt, systemPrompt, FALLBACK_MODEL);
-    onToken(content);
   }
+
+  const content = await callAI(prompt, systemPrompt);
+  onToken(content);
 }
 
 export async function parseJSONFromAI<T>(
