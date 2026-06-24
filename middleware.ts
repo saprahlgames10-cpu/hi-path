@@ -10,8 +10,12 @@ export async function middleware(req: NextRequest) {
 
   if (isPublicPage) return NextResponse.next();
 
-  const sbCookie = req.cookies.get("sb-access-token") || req.cookies.get("supabase-auth-token");
-  const hasSession = !!sbCookie;
+  // Supabase v2 stores auth token in a cookie named sb-<project-ref>-auth-token
+  // Check all cookies that start with "sb-" or contain "auth-token"
+  const authCookie = [...req.cookies.getAll()].find(
+    (c) => c.name.startsWith("sb-") || c.name.includes("auth-token")
+  );
+  const hasSession = !!authCookie;
 
   if (isDashboardPage && !hasSession) {
     return NextResponse.redirect(new URL("/auth/login", req.url));

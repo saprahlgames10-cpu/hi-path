@@ -10,27 +10,25 @@ function cleanSupabaseUrl(url: string): string {
 }
 
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseUrl = cleanSupabaseUrl(rawUrl);
+export const supabaseUrl = cleanSupabaseUrl(rawUrl);
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  }
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { persistSession: true, autoRefreshToken: true },
+});
+
+export function getServerClient(cookieHeaders?: string) {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: cookieHeaders ? { Cookie: cookieHeaders } : undefined },
+  });
+}
 
 export function getServiceClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  return createClient(
-    supabaseUrl,
-    serviceRoleKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
 export async function getAuthenticatedUser() {

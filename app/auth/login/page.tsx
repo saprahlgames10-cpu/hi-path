@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { Logo } from "@/components/logo";
 
@@ -22,10 +22,12 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginFormInner() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const {
@@ -33,6 +35,38 @@ export default function LoginPage() {
     handleSubmit,
     formState: { errors },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push("/dashboard");
+        return;
+      }
+
+      const error = searchParams.get("error");
+      if (error === "auth_callback_error") {
+        toast({ title: "Sign in failed", description: "Could not complete authentication. Please try again.", variant: "destructive" });
+      }
+
+      const code = searchParams.get("code");
+      if (code) {
+        setLoading(true);
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        setLoading(false);
+        if (!exchangeError) {
+          const { data: { session: newSession } } = await supabase.auth.getSession();
+          if (newSession) {
+            router.push("/dashboard");
+            return;
+          }
+        }
+      }
+
+      setCheckingSession(false);
+    };
+    init();
+  }, [router, searchParams, toast]);
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
@@ -53,10 +87,18 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
     });
     if (error) toast({ title: "Google login failed", description: error.message, variant: "destructive" });
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary-50 to-background dark:from-background dark:to-primary-900/10">
@@ -118,5 +160,17 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    }>
+      <LoginFormInner />
+    </Suspense>
   );
 }
