@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -58,9 +59,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary-50 to-background dark:from-background dark:to-primary-900/10">
       <Card className="w-full max-w-md animate-fade-in">
         <CardHeader className="text-center">
-          <Link href="/" className="text-2xl font-bold text-primary mb-2 block">
-            HiPath
-          </Link>
+          <div className="flex justify-center mb-2"><Logo size="lg" /></div>
           <CardTitle>Welcome back</CardTitle>
           <CardDescription>Sign in to continue learning</CardDescription>
         </CardHeader>

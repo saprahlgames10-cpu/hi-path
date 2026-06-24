@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles, Brain, Target, Zap, BarChart3, MessageSquare, Quote, Check } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 export default function LandingPage() {
   return (
@@ -7,7 +8,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <span className="text-xl font-bold text-primary">HiPath</span>
+          <Logo size="md" />
           <div className="flex items-center gap-4">
             <Link href="/auth/login" className="text-sm text-muted-foreground hover:text-foreground">Sign In</Link>
             <Link href="/auth/signup" className="text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-600">Get Started Free</Link>
@@ -189,7 +190,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-12 px-4 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-lg font-bold text-primary">HiPath</span>
+          <Logo size="md" />
           <p className="text-sm text-muted-foreground">Built with free open-source AI models. Your AI co-pilot for learning anything.</p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/auth/login" className="hover:text-foreground">Sign In</Link>

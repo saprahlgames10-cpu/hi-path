@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 const signupSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -55,14 +56,18 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupForm) => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: signupData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: { emailRedirectTo: `${window.location.origin}/auth/login` },
       });
       if (error) throw error;
-      toast({ title: "Account created!", description: "Welcome to HiPath. Let's set up your profile." });
-      router.push("/auth/onboarding");
+      if (signupData.session) {
+        toast({ title: "Account created!", description: "Welcome to HiPath. Let's set up your profile." });
+        router.push("/auth/onboarding");
+      } else {
+        toast({ title: "Check your email", description: "We sent a confirmation link. Please verify your email to continue." });
+      }
     } catch (error: any) {
       toast({ title: "Signup failed", description: error.message, variant: "destructive" });
     } finally {
@@ -79,7 +84,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary-50 to-background dark:from-background dark:to-primary-900/10">
       <Card className="w-full max-w-md animate-fade-in">
         <CardHeader className="text-center">
-          <Link href="/" className="text-2xl font-bold text-primary mb-2 block">HiPath</Link>
+          <div className="flex justify-center mb-2"><Logo size="lg" /></div>
           <CardTitle>Create your account</CardTitle>
           <CardDescription>Start your learning journey with AI</CardDescription>
         </CardHeader>

@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   title: "HiPath - Your AI Co-Pilot for Learning Anything",
   description:
     "HiPath generates personalized, adaptive learning roadmaps powered by AI. Stop guessing what to learn next.",
+  icons: {
+    icon: "/logo-icon.svg",
+    apple: "/logo-icon.svg",
+  },
   openGraph: {
     title: "HiPath - AI-Powered Learning Roadmaps",
     description: "Your AI co-pilot for learning anything.",

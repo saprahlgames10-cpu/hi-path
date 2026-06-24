@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/logo";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -40,7 +41,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       )}>
         <div className="flex flex-col h-full">
           <div className="p-4 flex items-center justify-between border-b border-border">
-            <Link href="/dashboard" className="text-xl font-bold text-primary">HiPath</Link>
+            <Link href="/dashboard"><Logo size="md" /></Link>
             <button onClick={onClose} className="lg:hidden"><X className="h-5 w-5" /></button>
           </div>
           <ScrollArea className="flex-1 py-2">
