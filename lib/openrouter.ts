@@ -1,8 +1,8 @@
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// Only text-only free models confirmed to work
 const TEXT_MODELS = [
   "microsoft/phi-3-mini-4k-instruct:free",
+  "meta-llama/llama-3.2-3b-instruct:free",
   "mistralai/mistral-7b-instruct:free",
   "google/gemma-2-2b-it:free",
 ];
@@ -12,11 +12,14 @@ interface AIResponse {
   model: string;
 }
 
+function isImageError(msg: string): boolean {
+  return msg.includes("image.png") || msg.includes("image input") || msg.includes("multimodal");
+}
+
 async function callModel(
   messages: { role: string; content: string }[],
   systemPrompt: string,
   model: string,
-  retries = 1
 ): Promise<AIResponse> {
   const body = JSON.stringify({
     model,
@@ -41,7 +44,10 @@ async function callModel(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`[${model}] ${response.status}: ${errorText}`);
+    const err = new Error(`[${model}] ${response.status}: ${errorText}`);
+    (err as any).model = model;
+    (err as any).errorText = errorText;
+    throw err;
   }
 
   const data = await response.json();
@@ -60,7 +66,12 @@ export async function callAI(
     ? [model, ...TEXT_MODELS.filter((m) => m !== model)]
     : TEXT_MODELS;
 
+  const tried = new Set<string>();
+
   for (const m of modelsToTry) {
+    if (tried.has(m)) continue;
+    tried.add(m);
+
     try {
       const result = await callModel(
         [{ role: "user", content: prompt }],
@@ -69,30 +80,14 @@ export async function callAI(
       );
       return result.content;
     } catch (err: any) {
+      if (isImageError(err.message || "")) {
+        continue;
+      }
       console.warn(`OpenRouter model ${m} failed:`, err.message);
     }
   }
 
-  // Final fallback: simplest possible request with just one model
-  try {
-    const res = await fetch(OPENROUTER_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "microsoft/phi-3-mini-4k-instruct:free",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 1024,
-      }),
-    });
-    const text = await res.text();
-    if (!res.ok) throw new Error(text);
-    return JSON.parse(text).choices[0].message.content;
-  } catch (err: any) {
-    throw new Error(`AI call failed: ${err.message}`);
-  }
+  throw new Error("AI service unavailable. Please try again later.");
 }
 
 export async function callAIStreaming(
@@ -105,7 +100,12 @@ export async function callAIStreaming(
     ? [model, ...TEXT_MODELS.filter((m) => m !== model)]
     : TEXT_MODELS;
 
+  const tried = new Set<string>();
+
   for (const m of modelsToTry) {
+    if (tried.has(m)) continue;
+    tried.add(m);
+
     try {
       const response = await fetch(OPENROUTER_API_URL, {
         method: "POST",
@@ -129,6 +129,7 @@ export async function callAIStreaming(
 
       if (!response.ok) {
         const errText = await response.text();
+        if (isImageError(errText)) continue;
         throw new Error(`${m}: ${errText}`);
       }
 
@@ -166,7 +167,6 @@ export async function callAIStreaming(
     }
   }
 
-  // fallback to non-streaming
   const content = await callAI(prompt, systemPrompt);
   onToken(content);
 }
