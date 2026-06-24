@@ -21,7 +21,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  if (isAuthPage && hasSession && !pathname.includes("onboarding")) {
+  if (isAuthPage && hasSession && !pathname.includes("onboarding") && !pathname.includes("callback")) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 

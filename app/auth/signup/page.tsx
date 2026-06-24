@@ -59,7 +59,7 @@ export default function SignupPage() {
       const { data: signupData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
       if (error) throw error;
       if (signupData.session) {
@@ -78,7 +78,7 @@ export default function SignupPage() {
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) toast({ title: "Google signup failed", description: error.message, variant: "destructive" });
   };

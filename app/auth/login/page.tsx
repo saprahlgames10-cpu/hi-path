@@ -87,7 +87,7 @@ function LoginFormInner() {
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) toast({ title: "Google login failed", description: error.message, variant: "destructive" });
   };
