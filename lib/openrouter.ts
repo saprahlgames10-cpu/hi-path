@@ -1,7 +1,9 @@
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const PRIMARY_MODEL = "mistralai/mistral-7b-instruct:free";
-const FALLBACK_MODEL = "google/gemma-2-9b-it:free";
-const TEXT_MODELS = ["mistralai/mistral-7b-instruct:free", "google/gemma-2-9b-it:free", "deepseek/deepseek-chat"];
+const TEXT_MODELS = [
+  "mistralai/mistral-7b-instruct:free",
+  "google/gemma-2-9b-it:free",
+  "deepseek/deepseek-chat",
+];
 
 interface AIResponse {
   content: string;
