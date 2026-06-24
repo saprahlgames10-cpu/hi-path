@@ -1,8 +1,11 @@
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+// Free text-only models on OpenRouter (no multimodal/image support needed)
 const TEXT_MODELS = [
   "mistralai/mistral-7b-instruct:free",
   "google/gemma-2-9b-it:free",
-  "deepseek/deepseek-chat",
+  "meta-llama/llama-3.2-3b-instruct:free",
+  "microsoft/phi-3-mini-4k-instruct:free",
+  "cognitivecomputations/dolphin-2.9-llama-3-8b:free",
 ];
 
 interface AIResponse {
@@ -45,6 +48,10 @@ async function callModel(
 
       if (!response.ok) {
         const errorText = await response.text();
+        // Skip models that can't handle text input (multimodal-only models)
+        if (errorText.includes("does not support image") || errorText.includes("image.png")) {
+          throw new Error("MODEL_SKIP: text-only input rejected");
+        }
         throw new Error(`OpenRouter API error ${response.status}: ${errorText}`);
       }
 
