@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase, getServiceClient } from "@/lib/supabase";
-import { callAIStreaming } from "@/lib/openrouter";
+import { callAI } from "@/lib/openrouter";
 
 export async function POST(req: Request) {
   try {
@@ -32,36 +32,77 @@ export async function POST(req: Request) {
         .eq("roadmap_id", roadmapId)
         .eq("user_id", user.id);
 
+      const { data: quizzes } = await serviceClient
+        .from("quiz_sessions")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("roadmap_id", roadmapId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const nextNode = nodes?.find((n: any) => n.status === "active" || n.status === "in_progress");
+      const completedNodes = nodes?.filter((n: any) => n.status === "completed").length || 0;
+      const weakQuizzes = quizzes?.filter((q: any) => (q.score || 0) < 60).length || 0;
+
       context = JSON.stringify({
-        roadmap: roadmap ? { title: roadmap.title, progress: roadmap.overall_progress, completed: roadmap.completed_nodes, total: roadmap.total_nodes } : null,
-        nodes: nodes?.map((n: any) => ({ title: n.title, status: n.status, type: n.node_type })) || [],
-        progress: progress?.length || 0,
+        title: roadmap?.title,
+        progress: roadmap?.overall_progress,
+        completed: completedNodes,
+        total: roadmap?.total_nodes,
+        nextTopic: nextNode?.title || "All done!",
+        nextTopicType: nextNode?.node_type || "",
+        nextTopicDifficulty: nextNode?.difficulty || "",
+        weakQuizCount: weakQuizzes,
+        totalQuizzes: quizzes?.length || 0,
+        goalDescription: roadmap?.goal_description,
+        skillLevel: roadmap?.skill_level,
+        learningStyle: roadmap?.learning_style,
       });
     }
 
-    const systemPrompt = `You are PathForge AI, a personal learning coach. You have full context of the user's learning journey. Be encouraging, specific, and practical. Only answer questions related to the user's learning path. If asked something unrelated, redirect to their roadmap. Context: ${context}`;
+    const systemPrompt = `You are PathForge AI, a personal learning coach inside HiPath, an AI-powered learning roadmap SaaS.
+You have full context of the user's learning journey. Be encouraging, specific, and practical.
+
+CONTEXT:
+${context}
+
+RULES:
+1. If asked "explain my next topic" — explain ${context ? "the next topic from their roadmap" : "what a learning roadmap is"} in simple terms, with examples.
+2. If asked "what should I study today" — suggest a specific 30-60 minute study session with concrete topics.
+3. If asked "where am I struggling" — analyze based on quiz scores and completed nodes.
+4. If asked "quiz me" — generate 3 quick questions with answers.
+5. If asked about career or motivation — relate their answer to their goal.
+6. Keep responses concise (2-4 paragraphs max).
+7. Always end with an encouraging note or a question to continue the conversation.`;
+
+    const content = await callAI(message, systemPrompt);
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
-      async start(controller) {
-        await callAIStreaming(
-          message,
-          systemPrompt,
-          (token: string) => {
-            controller.enqueue(encoder.encode(token));
-          }
-        );
+      start(controller) {
+        controller.enqueue(encoder.encode(content));
         controller.close();
       },
     });
 
     return new Response(stream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-      },
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Chat failed" }, { status: 500 });
+    const encoder = new TextEncoder();
+    const errorMsg = error.message?.includes("AI service unavailable")
+      ? "I'm having trouble connecting right now. All AI models are temporarily unavailable. Please try again in a few minutes."
+      : "I couldn't process that. Let me try again — please rephrase your question or ask something about your learning path.";
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(errorMsg));
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
   }
 }
