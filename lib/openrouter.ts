@@ -10,7 +10,7 @@ const TEXT_MODELS = [
 ];
 
 function isUnsupportedModel(errMsg: string): boolean {
-  return /image\.png|image input|multimodal|does not support/.test(errMsg);
+  return /image\.png|image input|multimodal|does not support|not a valid model|unavailable for free|rate.limited/.test(errMsg);
 }
 
 async function callModel(
