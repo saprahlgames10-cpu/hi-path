@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { NodeDetailModal } from "@/components/roadmap/node-detail-modal";
+import { SkillTree } from "@/components/roadmap/skill-tree";
 import { getNodeTypeIcon, getDifficultyColor, formatDate } from "@/lib/utils";
 import { Lock, CheckCircle, Play, BookOpen, Code2, HelpCircle, Link, Award, ArrowLeft, GitCompare, Sparkles, Loader2 } from "lucide-react";
 import type { Roadmap, RoadmapPhase, RoadmapNode } from "@/types";
@@ -57,6 +58,7 @@ export default function RoadmapDetail() {
   const [modalOpen, setModalOpen] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const [compareData, setCompareData] = useState<any>(null);
+  const [treeView, setTreeView] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -198,6 +200,23 @@ export default function RoadmapDetail() {
         </Card>
       )}
 
+      <div className="flex items-center gap-2">
+        <div className="flex-1" />
+        <Button variant={treeView ? "default" : "outline"} size="sm" className="text-xs h-7" onClick={() => setTreeView(true)}>
+          Tree View
+        </Button>
+        <Button variant={!treeView ? "default" : "outline"} size="sm" className="text-xs h-7" onClick={() => setTreeView(false)}>
+          List View
+        </Button>
+      </div>
+
+      {treeView ? (
+        <Card>
+          <CardContent className="p-5">
+            <SkillTree nodes={nodes} onNodeClick={(node) => { setSelectedNode(node); setModalOpen(true); }} />
+          </CardContent>
+        </Card>
+      ) : (
       <Accordion type="multiple" className="space-y-4">
         {phases.map((phase) => {
           const phaseNodes = getNodesByPhase(phase.id);
@@ -274,6 +293,7 @@ export default function RoadmapDetail() {
           );
         })}
       </Accordion>
+      )}
 
       {selectedNode && (
         <NodeDetailModal

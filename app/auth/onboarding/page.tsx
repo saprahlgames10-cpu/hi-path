@@ -82,7 +82,7 @@ export default function OnboardingPage() {
       });
       if (profileError) throw profileError;
 
-      const { error: roadmapError } = await supabase.from("roadmaps").insert({
+      const { data: newRoadmap, error: roadmapError } = await supabase.from("roadmaps").insert({
         user_id: user.id,
         title: `Learn ${formData.goal.substring(0, 50)}`,
         goal_description: formData.goal,
@@ -93,11 +93,20 @@ export default function OnboardingPage() {
         predicted_completion_date: new Date(Date.now() + formData.durationWeeks * 7 * 86400000).toISOString().split("T")[0],
         goal_parse: goalParse || {},
         status: "active",
-      });
+      }).select().single();
 
       if (roadmapError) throw roadmapError;
 
-      toast({ title: "Profile saved!", description: "Now let's generate your roadmap..." });
+      toast({ title: "Profile saved!", description: "AI is generating your personalized roadmap..." });
+
+      if (newRoadmap) {
+        fetch("/api/roadmap/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roadmapId: newRoadmap.id }),
+        }).catch(() => {});
+      }
+
       router.push("/dashboard");
     } catch (error: any) {
       toast({ title: "Something went wrong", description: error.message, variant: "destructive" });

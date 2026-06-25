@@ -7,7 +7,7 @@ import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  LayoutDashboard, Map, BarChart3, HelpCircle, AlertTriangle, Target, Settings, MessageSquare, X, LogOut, Briefcase, Trophy,
+  LayoutDashboard, Map, BarChart3, HelpCircle, AlertTriangle, Target, Settings, MessageSquare, X, LogOut, Briefcase, Trophy, BookOpen,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,9 @@ import { Logo } from "@/components/logo";
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/roadmap", icon: Map, label: "My Roadmap" },
+  { href: "/dashboard/planner", icon: Target, label: "Daily Plan" },
   { href: "/dashboard/review", icon: HelpCircle, label: "Review Queue" },
+  { href: "/dashboard/resources", icon: BookOpen, label: "Resources" },
   { href: "/dashboard/progress", icon: BarChart3, label: "Progress" },
   { href: "/dashboard/quizzes", icon: HelpCircle, label: "Quizzes" },
   { href: "/dashboard/weaknesses", icon: AlertTriangle, label: "Weaknesses" },
