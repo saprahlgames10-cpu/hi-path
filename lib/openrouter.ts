@@ -2,10 +2,11 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 // Free text-only models - kept up to date
 const TEXT_MODELS = [
+  "openrouter/free",
   "meta-llama/llama-3.2-3b-instruct:free",
-  "mistralai/mistral-7b-instruct:free",
-  "microsoft/phi-3-mini-4k-instruct:free",
-  "google/gemma-2-2b-it:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "qwen/qwen3-coder:free",
 ];
 
 function isUnsupportedModel(errMsg: string): boolean {
