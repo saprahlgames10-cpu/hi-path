@@ -38,9 +38,14 @@ function LoginFormInner() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        router.push("/dashboard");
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          router.push("/dashboard");
+          return;
+        }
+      } catch {
+        setCheckingSession(false);
         return;
       }
 
@@ -52,16 +57,20 @@ function LoginFormInner() {
       const code = searchParams.get("code");
       if (code) {
         setLoading(true);
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        setLoading(false);
-        if (!exchangeError) {
-          const { data: { session: newSession } } = await supabase.auth.getSession();
-          if (newSession) {
-            document.cookie = `sb-access-token=${newSession.access_token}; path=/; max-age=3600; SameSite=Lax`;
-            window.location.href = "/dashboard";
-            return;
+        try {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (!exchangeError) {
+            const { data: { session: newSession } } = await supabase.auth.getSession();
+            if (newSession) {
+              document.cookie = `sb-access-token=${newSession.access_token}; path=/; max-age=3600; SameSite=Lax`;
+              window.location.href = "/dashboard";
+              return;
+            }
           }
+        } catch {
+          // fall through
         }
+        setLoading(false);
       }
 
       setCheckingSession(false);

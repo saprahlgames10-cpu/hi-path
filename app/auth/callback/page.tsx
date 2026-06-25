@@ -11,25 +11,28 @@ function CallbackInner() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      const code = searchParams.get("code");
+      try {
+        const code = searchParams.get("code");
 
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          setStatus("Sign in failed.");
-          setTimeout(() => router.push(`/auth/login?error=${encodeURIComponent(exchangeError.message)}`), 2000);
-          return;
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            setStatus("Sign in failed.");
+            setTimeout(() => router.push(`/auth/login?error=${encodeURIComponent(exchangeError.message)}`), 2000);
+            return;
+          }
         }
-      }
 
-      // Check if Supabase has already established a session (from URL fragment or code exchange)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=3600; SameSite=Lax`;
-        window.location.href = "/dashboard";
-      } else {
-        setStatus("No authorization code found.");
-        setTimeout(() => router.push("/auth/login"), 2000);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=3600; SameSite=Lax`;
+          window.location.href = "/dashboard";
+        } else {
+          setStatus("No authorization code found.");
+          setTimeout(() => router.push("/auth/login"), 2000);
+        }
+      } catch {
+        router.push("/auth/login");
       }
     };
 
