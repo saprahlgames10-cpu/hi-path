@@ -12,7 +12,7 @@ export async function middleware(req: NextRequest) {
 
   // Supabase v2 stores auth token in a cookie named sb-<project-ref>-auth-token
   // Check all cookies that start with "sb-" or contain "auth-token"
-  const authCookie = [...req.cookies.getAll()].find(
+  const authCookie = req.cookies.get("sb-access-token") || [...req.cookies.getAll()].find(
     (c) => c.name.startsWith("sb-") || c.name.includes("auth-token")
   );
   const hasSession = !!authCookie;

@@ -14,24 +14,25 @@ function CallbackInner() {
       const code = searchParams.get("code");
 
       if (!code) {
-        setStatus("No authorization code found. Redirecting...");
+        setStatus("No authorization code found.");
         setTimeout(() => router.push("/auth/login"), 2000);
         return;
       }
 
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-      if (error) {
-        setStatus("Sign in failed. Redirecting...");
-        setTimeout(() => router.push(`/auth/login?error=${error.message}`), 2000);
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) {
+        setStatus("Sign in failed.");
+        setTimeout(() => router.push(`/auth/login?error=${encodeURIComponent(exchangeError.message)}`), 2000);
         return;
       }
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push("/dashboard");
+        // Also set a cookie so middleware can detect the session
+        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=3600; SameSite=Lax`;
+        window.location.href = "/dashboard";
       } else {
-        setStatus("Session not established. Redirecting...");
+        setStatus("Session not established.");
         setTimeout(() => router.push("/auth/login"), 2000);
       }
     };
