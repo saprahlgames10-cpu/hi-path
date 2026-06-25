@@ -41,7 +41,8 @@ function LoginFormInner() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          router.push("/dashboard");
+          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=3600; SameSite=Lax`;
+          window.location.href = "/dashboard";
           return;
         }
       } catch {

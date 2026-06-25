@@ -63,8 +63,9 @@ export default function SignupPage() {
       });
       if (error) throw error;
       if (signupData.session) {
+        document.cookie = `sb-access-token=${signupData.session.access_token}; path=/; max-age=3600; SameSite=Lax`;
         toast({ title: "Account created!", description: "Welcome to HiPath. Let's set up your profile." });
-        router.push("/auth/onboarding");
+        window.location.href = "/auth/onboarding";
       } else {
         toast({ title: "Check your email", description: "We sent a confirmation link. Please verify your email to continue." });
       }
