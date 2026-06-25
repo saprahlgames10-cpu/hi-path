@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { getDifficultyColor, XP_REWARDS } from "@/lib/utils";
-import { BookOpen, ExternalLink, Star, RefreshCw, Loader2 } from "lucide-react";
+import { BookOpen, ExternalLink, Star, RefreshCw, Loader2, Brain, Focus } from "lucide-react";
 import type { RoadmapNode } from "@/types";
 
 interface Props {
@@ -106,9 +106,15 @@ export function NodeDetailModal({ node, open, onOpenChange, onNodeUpdate }: Prop
         }
       }
 
+      await fetch("/api/review/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nodeId: node.id, roadmapId: node.roadmap_id }),
+      });
+
       setXp(xp + xpReward);
       onNodeUpdate({ ...node, status: "completed" });
-      toast({ title: "Node completed!", description: `+${xpReward} XP earned` });
+      toast({ title: "Node completed!", description: `+${xpReward} XP earned · Added to review queue` });
       onOpenChange(false);
     } catch (e: any) {
       toast({ title: "Failed to complete node", description: e.message, variant: "destructive" });
@@ -175,7 +181,12 @@ export function NodeDetailModal({ node, open, onOpenChange, onNodeUpdate }: Prop
                   {node.status === "locked" ? null : node.status !== "in_progress" ? (
                     <Button onClick={markInProgress}>Mark as In Progress</Button>
                   ) : (
-                    <Button onClick={() => setShowConfirmation(true)}>Mark as Complete</Button>
+                    <>
+                      <Button onClick={() => setShowConfirmation(true)}>Mark as Complete</Button>
+                      <Button variant="outline" onClick={() => window.open(`/dashboard/review?nodeId=${node.id}`, "_blank")}>
+                        <Brain className="h-4 w-4 mr-1" /> Review
+                      </Button>
+                    </>
                   )}
                 </>
               )}
@@ -206,24 +217,53 @@ export function NodeDetailModal({ node, open, onOpenChange, onNodeUpdate }: Prop
               />
               <Button size="sm" variant="outline" onClick={() => toast({ title: "Notes saved" })}>Save Notes</Button>
             </div>
+            <div className="space-y-2 pt-2 border-t">
+              <h4 className="text-sm font-medium">Real-World Application</h4>
+              <p className="text-xs text-muted-foreground">Log a project, task, or practical application of this skill</p>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 rounded-lg border border-border bg-transparent px-3 py-2 text-sm"
+                  placeholder="e.g., Built a CLI calculator"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+                <Button size="sm" variant="outline" onClick={async () => {
+                  if (!notes.trim()) return;
+                  await fetch("/api/applications/log", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      nodeId: node.id,
+                      title: notes.trim(),
+                      description: `Applied from "${node.title}"`,
+                      applicationType: "project",
+                    }),
+                  });
+                  toast({ title: "Application logged!" });
+                  setNotes("");
+                }}>Log</Button>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="quiz" className="space-y-4 mt-4">
             <div className="text-center py-8">
-              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <h3 className="font-medium mb-1">Test your knowledge</h3>
-              <p className="text-sm text-muted-foreground mb-4">Take a quiz to check your understanding</p>
+              <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <h3 className="font-medium mb-1">Adaptive Quiz</h3>
+              <p className="text-sm text-muted-foreground mb-2">Questions adapt to your skill level</p>
               <Button onClick={async () => {
-                const res = await fetch("/api/quiz/generate", {
+                const res = await fetch("/api/quiz/adaptive-generate", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ nodeId: node.id, difficulty: node.difficulty }),
+                  body: JSON.stringify({ nodeId: node.id, roadmapId: node.roadmap_id }),
                 });
                 const data = await res.json();
                 if (data.sessionId) {
-                  window.open(`/quiz/${data.sessionId}`, "_blank");
+                  window.open(`/quiz/${data.sessionId}?difficulty=${data.difficulty}`, "_blank");
                 }
-              }}>Start Quiz</Button>
+              }}>
+                <Focus className="h-4 w-4 mr-2" /> Start Adaptive Quiz
+              </Button>
             </div>
           </TabsContent>
         </Tabs>

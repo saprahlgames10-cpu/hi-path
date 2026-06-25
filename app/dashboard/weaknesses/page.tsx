@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useStore } from "@/store/useStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,27 +10,45 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
-import { AlertTriangle, TrendingUp, RefreshCw, ArrowRight } from "lucide-react";
-import type { WeaknessReport } from "@/types";
+import { AlertTriangle, TrendingUp, RefreshCw, ArrowRight, BookOpen } from "lucide-react";
+import type { WeaknessReport, RoadmapNode } from "@/types";
 
 export default function WeaknessesPage() {
   const { user } = useStore();
   const [report, setReport] = useState<WeaknessReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [remediationNodes, setRemediationNodes] = useState<RoadmapNode[]>([]);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     const fetch = async () => {
       if (!user) return;
-      const { data } = await supabase
-        .from("weakness_reports")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("generated_at", { ascending: false })
-        .limit(1)
-        .single();
-      if (data) setReport(data as WeaknessReport);
+      const [{ data }, { data: rm }] = await Promise.all([
+        supabase.from("weakness_reports").select("*").eq("user_id", user.id).order("generated_at", { ascending: false }).limit(1).single(),
+        supabase.from("roadmaps").select("id").eq("user_id", user.id).eq("status", "active").single(),
+      ]);
+      if (data) {
+        setReport(data as WeaknessReport);
+        if (rm && (data as WeaknessReport).weak_topics?.length > 0) {
+          const weakTopicNames = (data as WeaknessReport).weak_topics.map((t: any) => t.topic.toLowerCase());
+          const { data: nd } = await supabase
+            .from("roadmap_nodes")
+            .select("*")
+            .eq("roadmap_id", rm.id)
+            .neq("status", "completed")
+            .order("order_index");
+          if (nd) {
+            const matched = (nd as RoadmapNode[]).filter((n) =>
+              weakTopicNames.some((topic: string) =>
+                n.title.toLowerCase().includes(topic) || n.description?.toLowerCase().includes(topic)
+              )
+            );
+            setRemediationNodes(matched.slice(0, 5));
+          }
+        }
+      }
       setLoading(false);
     };
     fetch();
@@ -161,6 +180,26 @@ export default function WeaknessesPage() {
                     <Badge variant={r.priority === "high" ? "destructive" : r.priority === "medium" ? "warning" : "secondary"}>
                       {r.priority}
                     </Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {remediationNodes.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Suggested Remedial Nodes</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-xs text-muted-foreground mb-2">These roadmap nodes target your weak areas:</p>
+                {remediationNodes.map((n) => (
+                  <div key={n.id} className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/30 cursor-pointer"
+                    onClick={() => router.push(`/dashboard/roadmap/${n.roadmap_id}`)}>
+                    <BookOpen className="h-4 w-4 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{n.title}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{n.node_type} · {n.difficulty} · {n.estimated_hours}h</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                   </div>
                 ))}
               </CardContent>

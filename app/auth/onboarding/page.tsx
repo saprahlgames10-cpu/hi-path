@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, ArrowLeft, BookOpen, Eye, Headphones, Pen, Check } from "lucide-react";
+import { ArrowRight, ArrowLeft, BookOpen, Eye, Headphones, Pen, Check, Sparkles, Loader2 } from "lucide-react";
+import type { GoalParse } from "@/types";
 
 const learningStyles = [
   { value: "visual", label: "Visual", icon: Eye, desc: "Diagrams, videos, and images" },
@@ -33,6 +34,8 @@ const durations = [
 export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [goalParse, setGoalParse] = useState<GoalParse | null>(null);
   const [formData, setFormData] = useState({
     fullName: "",
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -80,6 +83,8 @@ export default function OnboardingPage() {
         skill_level: formData.skillLevel,
         learning_style: formData.learningStyle,
         hours_per_week: formData.hoursPerWeek,
+        predicted_completion_date: new Date(Date.now() + formData.durationWeeks * 7 * 86400000).toISOString().split("T")[0],
+        goal_parse: goalParse || {},
         status: "active",
       });
 
@@ -119,12 +124,57 @@ export default function OnboardingPage() {
           <div className="space-y-2">
             <Label>Learning Goal</Label>
             <textarea
-              className="flex min-h-[120px] w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
-              placeholder="e.g., Become a Python developer in 12 months"
+              className="flex min-h-[100px] w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+              placeholder="e.g., Become a Python developer in 12 months. I want to build web apps and have basic coding experience."
               value={formData.goal}
-              onChange={(e) => update("goal", e.target.value)}
+              onChange={(e) => { update("goal", e.target.value); setGoalParse(null); }}
             />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-1"
+              disabled={!formData.goal || parsing}
+              onClick={async () => {
+                setParsing(true);
+                try {
+                  const res = await fetch("/api/goals/parse", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ goal: formData.goal }),
+                  });
+                  const data = await res.json();
+                  if (!data.error) {
+                    setGoalParse(data);
+                    update("skillLevel", data.seniority === "senior" ? "advanced" : data.seniority === "mid" ? "intermediate" : "beginner");
+                    toast({ title: "Goal analyzed!", description: `Target role: ${data.targetRole}` });
+                  } else toast({ title: "Parse failed", description: data.error, variant: "destructive" });
+                } catch { toast({ title: "Error", description: "Failed to analyze goal", variant: "destructive" }); }
+                finally { setParsing(false); }
+              }}
+            >
+              {parsing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+              AI Analyze Goal
+            </Button>
           </div>
+          {goalParse && (
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-2 text-sm animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{goalParse.targetRole}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10">{goalParse.seniority}</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {goalParse.requiredSkills.map((s: string) => (
+                  <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-muted">{s}</span>
+                ))}
+              </div>
+              <div className="text-xs text-muted-foreground flex justify-between">
+                <span>Industry: {goalParse.industry}</span>
+                <span>Est. {goalParse.estimatedMonths} months</span>
+                <span>Demand: {goalParse.marketDemand}</span>
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Skill Level</Label>
             <div className="grid grid-cols-3 gap-2">

@@ -24,6 +24,12 @@ export interface Roadmap {
   total_nodes: number;
   completed_nodes: number;
   overall_progress: number;
+  goal_parse: GoalParse | null;
+  version: number;
+  previous_version_id: string | null;
+  change_log: RoadmapChangeLog[];
+  predicted_completion_date: string | null;
+  dropout_risk: number;
   created_at: string;
   updated_at: string;
 }
@@ -231,4 +237,86 @@ export interface AIDailyGoal {
   target_nodes: string[];
   estimated_time_minutes: number;
   motivation_message: string;
+}
+
+export interface GoalParse {
+  targetRole: string;
+  seniority: string;
+  industry: string;
+  requiredSkills: string[];
+  estimatedMonths: number;
+  marketDemand: string;
+  subGoals: string[];
+}
+
+export interface ReviewItem {
+  id: string;
+  user_id: string;
+  node_id: string;
+  roadmap_id: string;
+  due_at: string;
+  interval_days: number;
+  ease_factor: number;
+  repetitions: number;
+  last_reviewed_at: string | null;
+  created_at: string;
+  roadmap_nodes?: RoadmapNode;
+}
+
+export interface FocusSession {
+  id: string;
+  user_id: string;
+  node_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number;
+  distracted_seconds: number;
+  energy_level: number | null;
+  mood: number | null;
+  completed: boolean;
+}
+
+export interface RealWorldApplication {
+  id: string;
+  user_id: string;
+  node_id: string | null;
+  title: string;
+  description: string | null;
+  application_type: string;
+  skills_used: string[];
+  created_at: string;
+}
+
+export interface AnalyticsPrediction {
+  predictedCompletionDate: string;
+  targetDate: string;
+  estimatedDaysRemaining: number;
+  onTrack: boolean;
+  efficiencyScore: number;
+  avgQuizScore: number;
+  pacePerDay: number;
+  completedCount: number;
+  totalNodes: number;
+  dropoutRisk: number;
+  daysSinceLastActive: number;
+}
+
+export interface CoachMessage {
+  sent: boolean;
+  title: string;
+  message: string;
+}
+
+export interface AdaptedQuizSession {
+  sessionId: string;
+  difficulty: string;
+  questions: QuizQuestion[];
+  avgRecentScore: number;
+}
+
+export interface RoadmapChangeLog {
+  version: number;
+  changed_at: string;
+  changes: string[];
+  reason: string;
 }

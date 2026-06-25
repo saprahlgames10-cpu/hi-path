@@ -11,6 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StreakWidget } from "@/components/dashboard/streak-widget";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { WeeklyChart } from "@/components/dashboard/weekly-chart";
+import { AnalyticsCard } from "@/components/dashboard/analytics-card";
+import { CoachWidget } from "@/components/dashboard/coach-widget";
+import { ReviewQueue } from "@/components/dashboard/review-queue";
+import { FocusTimer } from "@/components/dashboard/focus-timer";
 import { formatDate, formatTimeAgo } from "@/lib/utils";
 import { ArrowRight, Target, Map, Clock } from "lucide-react";
 import type { Roadmap, UserProgress, DailyGoal } from "@/types";
@@ -20,6 +24,7 @@ export default function DashboardHome() {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [dailyGoal, setDailyGoal] = useState<DailyGoal | null>(null);
+  const [weeklyData, setWeeklyData] = useState<{ day: string; value: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -58,12 +63,16 @@ export default function DashboardHome() {
 
       if (goal) setDailyGoal(goal as DailyGoal);
 
-      const completed = progress?.filter((p: any) => p.status === "completed").length || 0;
-      const { data: quizzes } = await supabase
-        .from("quiz_sessions")
-        .select("id")
-        .eq("user_id", user.id)
-        .gte("score", 70);
+      const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const dayCount: Record<string, number> = {};
+      weekDays.forEach((d) => { dayCount[d] = 0; });
+      (progress || []).forEach((p: any) => {
+        const d = new Date(p.created_at);
+        const day = weekDays[d.getDay()];
+        const since = (Date.now() - d.getTime()) / 86400000;
+        if (since <= 7 && dayCount[day] !== undefined) dayCount[day]++;
+      });
+      setWeeklyData(weekDays.map((d) => ({ day: d, value: dayCount[d] })));
 
       setXp(roadmaps?.overall_progress ? Math.round(roadmaps.overall_progress * 10) : xp);
       setLoading(false);
@@ -83,9 +92,6 @@ export default function DashboardHome() {
     );
   }
 
-  const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const chartData = weekDays.map((day) => ({ day, xp: Math.floor(Math.random() * 100) }));
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -93,24 +99,27 @@ export default function DashboardHome() {
       </div>
 
       {roadmap ? (
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Map className="h-5 w-5 text-primary" />
-                <span className="font-semibold">{roadmap.title}</span>
+        <>
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Map className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">{roadmap.title}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">{roadmap.completed_nodes}/{roadmap.total_nodes} nodes</span>
               </div>
-              <span className="text-xs text-muted-foreground">{roadmap.completed_nodes}/{roadmap.total_nodes} nodes</span>
-            </div>
-            <Progress value={roadmap.overall_progress} className="mb-2" />
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{Math.round(roadmap.overall_progress)}% complete</span>
-              <Button variant="link" size="sm" className="text-primary" onClick={() => router.push("/dashboard/roadmap")}>
-                Continue <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <Progress value={roadmap.overall_progress} className="mb-2" />
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{Math.round(roadmap.overall_progress)}% complete</span>
+                <Button variant="link" size="sm" className="text-primary" onClick={() => router.push("/dashboard/roadmap")}>
+                  Continue <ArrowRight className="ml-1 h-3 w-3" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <AnalyticsCard roadmapId={roadmap.id} />
+        </>
       ) : (
         <Card>
           <CardContent className="p-6 text-center">
@@ -152,12 +161,19 @@ export default function DashboardHome() {
         <StatsCards xp={xp} nodesCompleted={roadmap?.completed_nodes || 0} quizzesPassed={0} />
       </div>
 
+      {roadmap && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <CoachWidget roadmapId={roadmap.id} />
+          <ReviewQueue />
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Weekly Progress</CardTitle>
         </CardHeader>
         <CardContent>
-          <WeeklyChart data={chartData} />
+          <WeeklyChart data={weeklyData} />
         </CardContent>
       </Card>
 
@@ -181,6 +197,8 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
       )}
+
+      <FocusTimer />
     </div>
   );
 }
