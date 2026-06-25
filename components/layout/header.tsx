@@ -19,11 +19,12 @@ export function Header() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (!user?.id) return;
     const fetchNotifications = async () => {
       const { data } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user?.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
       if (data) {

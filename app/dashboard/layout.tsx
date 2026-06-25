@@ -17,19 +17,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     const loadUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/auth/login"); return; }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push("/auth/login"); return; }
 
-      const { data: profile } = await supabase
-        .from("users_profile")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+        const { data: profile, error: profileError } = await supabase
+          .from("users_profile")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
 
-      if (profile) {
-        setUser(profile);
-        setXp(profile.total_xp || 0);
-        setStreakCount(profile.streak_count || 0);
+        if (profile && !profileError) {
+          setUser(profile);
+          setXp(profile.total_xp || 0);
+          setStreakCount(profile.streak_count || 0);
+        } else {
+          setUser({ id: user.id, full_name: user.email?.split("@")[0] || "Learner", email: user.email } as any);
+          if (window.location.pathname !== "/auth/onboarding") {
+            router.push("/auth/onboarding");
+            return;
+          }
+        }
+      } catch {
+        // profile fetch failed, redirect to onboarding to create one
+        router.push("/auth/onboarding");
+        return;
       }
       setLoading(false);
     };
