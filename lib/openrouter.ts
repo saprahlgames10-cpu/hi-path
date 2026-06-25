@@ -1,36 +1,22 @@
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
+// Free text-only models - kept up to date
 const TEXT_MODELS = [
-  "microsoft/phi-3-mini-4k-instruct:free",
   "meta-llama/llama-3.2-3b-instruct:free",
   "mistralai/mistral-7b-instruct:free",
+  "microsoft/phi-3-mini-4k-instruct:free",
   "google/gemma-2-2b-it:free",
 ];
 
-interface AIResponse {
-  content: string;
-  model: string;
-}
-
-function isImageError(msg: string): boolean {
-  return msg.includes("image.png") || msg.includes("image input") || msg.includes("multimodal");
+function isUnsupportedModel(errMsg: string): boolean {
+  return /image\.png|image input|multimodal|does not support/.test(errMsg);
 }
 
 async function callModel(
   messages: { role: string; content: string }[],
   systemPrompt: string,
   model: string,
-): Promise<AIResponse> {
-  const body = JSON.stringify({
-    model,
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...messages,
-    ],
-    temperature: 0.7,
-    max_tokens: 4096,
-  });
-
+): Promise<string> {
   const response = await fetch(OPENROUTER_API_URL, {
     method: "POST",
     headers: {
@@ -39,22 +25,24 @@ async function callModel(
       "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
       "X-Title": "HiPath",
     },
-    body,
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ],
+      temperature: 0.7,
+      max_tokens: 4096,
+    }),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    const err = new Error(`[${model}] ${response.status}: ${errorText}`);
-    (err as any).model = model;
-    (err as any).errorText = errorText;
-    throw err;
+    const errText = await response.text();
+    throw new Error(errText);
   }
 
   const data = await response.json();
-  return {
-    content: data.choices[0].message.content,
-    model,
-  };
+  return data.choices[0].message.content;
 }
 
 export async function callAI(
@@ -67,23 +55,21 @@ export async function callAI(
     : TEXT_MODELS;
 
   const tried = new Set<string>();
+  let lastError = "";
 
   for (const m of modelsToTry) {
     if (tried.has(m)) continue;
     tried.add(m);
 
     try {
-      const result = await callModel(
+      return await callModel(
         [{ role: "user", content: prompt }],
         systemPrompt,
         m
       );
-      return result.content;
     } catch (err: any) {
-      if (isImageError(err.message || "")) {
-        continue;
-      }
-      console.warn(`OpenRouter model ${m} failed:`, err.message);
+      lastError = err.message || "";
+      if (isUnsupportedModel(lastError)) continue;
     }
   }
 
@@ -129,8 +115,8 @@ export async function callAIStreaming(
 
       if (!response.ok) {
         const errText = await response.text();
-        if (isImageError(errText)) continue;
-        throw new Error(`${m}: ${errText}`);
+        if (isUnsupportedModel(errText)) continue;
+        throw new Error(errText);
       }
 
       const reader = response.body?.getReader();
@@ -142,7 +128,6 @@ export async function callAIStreaming(
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
@@ -156,7 +141,7 @@ export async function callAIStreaming(
               const token = parsed.choices?.[0]?.delta?.content || "";
               if (token) onToken(token);
             } catch {
-              // skip parse errors
+              // skip
             }
           }
         }
@@ -167,8 +152,12 @@ export async function callAIStreaming(
     }
   }
 
-  const content = await callAI(prompt, systemPrompt);
-  onToken(content);
+  try {
+    const content = await callAI(prompt, systemPrompt);
+    onToken(content);
+  } catch {
+    onToken("I'm having trouble connecting right now. Please try again.");
+  }
 }
 
 export async function parseJSONFromAI<T>(
