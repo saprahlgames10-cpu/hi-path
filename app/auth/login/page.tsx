@@ -57,7 +57,8 @@ function LoginFormInner() {
         if (!exchangeError) {
           const { data: { session: newSession } } = await supabase.auth.getSession();
           if (newSession) {
-            router.push("/dashboard");
+            document.cookie = `sb-access-token=${newSession.access_token}; path=/; max-age=3600; SameSite=Lax`;
+            window.location.href = "/dashboard";
             return;
           }
         }
@@ -87,7 +88,7 @@ function LoginFormInner() {
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/auth/login` },
     });
     if (error) toast({ title: "Google login failed", description: error.message, variant: "destructive" });
   };
