@@ -5,8 +5,9 @@ import { useStore } from "@/store/useStore";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { getTimeOfDay, calculateLevel, formatTimeAgo } from "@/lib/utils";
-import { Bell, Menu, Flame, Zap, CheckCheck } from "lucide-react";
+import { Bell, Menu, Flame, Zap, CheckCheck, Search } from "lucide-react";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -47,15 +48,20 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border">
-      <div className="flex items-center justify-between h-16 px-4 md:px-6">
+      <div className="flex items-center justify-between h-16 px-4 md:px-6 gap-4">
         <div className="flex items-center gap-3">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden">
             <Menu className="h-6 w-6" />
           </button>
-          <div>
-            <h2 className="text-sm md:text-base font-medium">
-              Good {getTimeOfDay()}, {user?.full_name?.split(" ")[0] || "Learner"}
-            </h2>
+        </div>
+
+        <div className="hidden md:flex flex-1 max-w-md">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search anything..."
+              className="pl-9 h-9 text-sm bg-muted/50 border-none focus-visible:ring-1"
+            />
           </div>
         </div>
 

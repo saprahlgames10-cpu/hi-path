@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase, getServiceClient } from "@/lib/supabase";
-import { parseJSONFromAI } from "@/lib/openrouter";
+import { parseJSONFromAI } from "@/lib/anthropic";
 
 export async function POST(req: Request) {
   try {

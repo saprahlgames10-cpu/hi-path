@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase, getServiceClient } from "@/lib/supabase";
-import { callAI } from "@/lib/openrouter";
+import { callAI } from "@/lib/anthropic";
 
 export async function POST(req: Request) {
   try {
